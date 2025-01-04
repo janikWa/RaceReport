@@ -1,3 +1,5 @@
+
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -23,23 +25,3 @@ def handle_cookies():
     except Exception as e:
         print(f"Kein Cookie-Banner gefunden oder Fehler aufgetreten: {e}")
 
-
-options = Options()
-options.add_experimental_option("detach", True)
-
-driver = webdriver.Chrome(options=options)
-driver.get("https://www.instagram.com")
-
-time.sleep(1)
-
-handle_cookies()
-
-time.sleep(1)
-
-name = "janik_wahrheit"
-pw = "_KxMxL_131201_"
-
-enter_text('//*[@id="loginForm"]/div/div[1]/div/label/input', name)
-enter_text('//*[@id="loginForm"]/div/div[2]/div/label/input', pw)
-
-driver.find_element(By.XPATH, '//*[@id="loginForm"]/div/div[3]/button').click()
