@@ -1,0 +1,177 @@
+---
+title: "RaceReport"
+title-block-banner: "images/banner_red.jpg"
+format:
+  html:
+    page-layout: full
+    embed-resources: true
+    grid:
+      body-width: 1200px
+      sidebar-width: 400px
+echo: false
+toc: true
+jupyter: python3
+---
+
+```{python}
+#| echo: false
+from dataservice import DataService
+from IPython.display import Markdown, display
+import pandas as pd 
+import seaborn as sns 
+import matplotlib.pyplot as plt 
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.express as px 
+```
+
+```{python}
+#| echo: false
+#| output: false
+obj = DataService() 
+data = obj.scrape_data("https://my.raceresult.com/309137/")
+```
+
+# `{python} obj.title`
+
+## 📅 `{python} obj.date` \|📍 `{python} obj.location`
+
+## 
+
+# Demographics
+
+```{python}
+#make table 
+
+cols_to_show = [col for col in data.columns if col not in ["datetime", "AK", "M/W"]]
+
+table = go.Figure(
+    data=[
+        go.Table(
+            header=dict(
+                values=cols_to_show, 
+                fill_color="#b81212",
+                font=dict(size=15, color="white"), 
+                align="center"
+            ),
+            cells=dict(
+                values=[data[col].tolist() for col in cols_to_show],
+                font=dict(size=12),
+                fill_color="white", 
+                line_color="#b81212",
+                align="center"
+            ),
+        )
+    ]
+)
+
+table.update_layout(margin=dict(b=40))
+table.show()
+
+```
+
+
+
+```{python}
+
+gender_counts = data['M/W'].value_counts()
+
+
+# Assuming 'gender_counts' is already calculated (counts of 'M' and 'W')
+fig = px.pie(
+    names=gender_counts.index,  # The categories (M and W)
+    values=gender_counts.values,  # The count of each category
+    title="Proportion of Male/Female Participants",  # Title of the pie chart
+    color=gender_counts.index,  # Color by gender categories (M and W)
+    color_discrete_map={"M": "#b81212", "W": "#ffffff"}
+)
+
+# Add a red border around the white sector (Female category)
+fig.update_traces(
+     hovertemplate="<b>Geschlecht: </b> %{label}<br>" +  # Display M/W category
+                  "<b>Teilnehmer:</b> %{value} <extra></extra>",  # Display the count value
+    marker=dict(
+        line=dict(
+            color="#b81212",  # Red color for the border
+            width=1  # Set the width of the border
+        )
+    )
+)
+
+# Show the pie chart
+fig.show()
+
+```
+
+
+
+
+# Race Insights
+
+::: {layout-ncol="2"}
+```{python}
+import plotly.express as px
+
+# Create the histogram
+fig = px.histogram(
+    data, 
+    x="datetime", 
+    nbins=80, 
+    title="Verteilung der Rennzeiten",  # Add a title
+    color_discrete_sequence=["#b81212"] # Custom color
+)
+
+# Customize layout
+fig.update_layout(
+    title_font=dict(size=20, family="Arial", color="black"),  # Title font style
+    xaxis_title = "Zeit", 
+    yaxis_title = "Anzahl",
+    xaxis=dict(showgrid=True, gridcolor="lightgray"),  # Add gridlines
+    yaxis=dict(showgrid=True, gridcolor="lightgray"),
+    plot_bgcolor="white",  # Background color
+    bargap=0.2,  # Gap between bars
+    xaxis_tickformat = "%H:%M:%S"
+)
+
+def test(x): 
+  print( type(x))
+
+# Customize bars
+fig.update_traces(
+    marker=dict(
+        line=dict(width=1, color="black")  # Add border to bars
+    ),
+    opacity=0.8, 
+    hovertemplate="<b>Zeit in Minuten:</b> %{x}<br>" +  # Customize hover text
+              "<b>Anzahl:</b> %{y}<extra></extra>" 
+)
+
+# Show the plot
+fig.show()
+
+```
+
+```{python}
+
+boxplot_race_time = px.box(
+  data, 
+  y = "datetime", 
+  title = "Boxplot der Rennzeiten", 
+  color_discrete_sequence=["#b81212"]  
+)
+
+# Customize layout
+boxplot_race_time.update_layout(
+    title_font=dict(size=20, family="Arial", color="black"), 
+    yaxis_title="Zeit in Minuten",  # Y-axis title
+    xaxis=dict(showgrid=True, gridcolor="lightgray"),  
+    yaxis=dict(showgrid=True, gridcolor="lightgray"),
+    plot_bgcolor="white",  
+    yaxis_tickformat = "%H:%M:%S"
+)
+
+
+boxplot_race_time.show() 
+
+```
+:::

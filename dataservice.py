@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import logging
 import time
+import re 
 
 # Constants for timeouts and indices
 COOKIE_BANNER_TIMEOUT = 5
@@ -20,7 +21,7 @@ class DataService:
         """
         Initializes the DataService with a Selenium WebDriver.
         """
-        self.driver = webdriver.Chrome()
+        self.driver = None
         self.source = None
         self.date = None 
         self.location = None 
@@ -33,6 +34,7 @@ class DataService:
         """
         Navigates to the specified URL using the WebDriver.
         """
+        self.driver = webdriver.Chrome()
         self.driver.get(url)
         self.source = url
         print(f"[DEBUG] Navigated to URL: {url}")
@@ -112,8 +114,6 @@ class DataService:
         except Exception as e:
             logging.error(f"Error waiting for main table: {e}")
 
-
-
     def get_table_as_df(self):
         """
         Extracts a table with the class 'MainTable' from the webpage and returns it as a DataFrame.
@@ -155,8 +155,45 @@ class DataService:
             logging.info("Driver closed.")
 
 
-            
+    def normalize_time(self, time_str,):
+        """
+        Makes sure that string is in format HH:MM:SS
 
+            Parameters: 
+                time_str: String describing the time 
+        """
+
+        time_parts = time_str.split(":")
+        if len(time_parts) == 2:
+            time_str = f"00:{time_str}"  # Add "00:" for hours
+        return time_str
+    
+    def set_time(self): 
+        """
+        Converts the string displaying the time to a timedelta object; then computes the time in minutes
+        """
+        self.dataFrame["datetime"] = self.dataFrame["Zeit"].apply(self.normalize_time)
+        self.dataFrame["datetime"] = pd.to_datetime(self.dataFrame["datetime"])
+        self.dataFrame["Zeit"] = self.dataFrame["datetime"].dt.strftime("%H:%M:%S")
+        #self.dataFrame["Zeit_minutes"] = self.dataFrame["Zeit"].dt.total_seconds() / 60
+        #self.dataFrame["Zeit"] = self.dataFrame["Zeit"].dt.components.apply(lambda row: f"{row.hours:02}:{row.minutes:02}:{row.seconds:02}", axis=1)
+    
+    def set_agegroup(self): 
+        """
+        extracts the ageroup form the AK-Pl. col
+        """
+        pattern = r"^\d+\.\s*(.*)"
+        self.dataFrame["AK"] = self.dataFrame["AK-Pl."].apply(lambda x: re.sub(pattern, r"\1", x))
+    
+    def set_sex(self): 
+        """
+        sets the sex
+        """
+        self.dataFrame["M/W"] = self.dataFrame["AK"].str[0]
+    
+    def drop_nat(self): 
+        self.dataFrame.drop(["Nat."], axis=1, inplace=True)
+            
     def scrape_data(self, url):
         """
         Performs all necessary steps to scrape data from the given URL:
@@ -182,20 +219,33 @@ class DataService:
         # Step 2: Handle the cookie banner
         self.handle_cookie_banner()
 
+        self.click_show_all_buttons()
+
         # Step 3: Get the metadata about the race
         self.create_soup()
+
         self.get_metadata()
 
         # Step 4: Click 'Show All' buttons if any
-        self.click_show_all_buttons()
+
 
         # Step 5: Expand the table
         self.expand_table()
 
         # Step 6: Get the data as a DataFrame
-        data = self.get_table_as_df()
+        self.get_table_as_df() 
 
-        return data
+        self.set_time()
+
+        self.set_agegroup() 
+
+        self.set_sex() 
+
+        self.drop_nat()
+
+        self.close() 
+
+        return self.dataFrame
 
 
 
