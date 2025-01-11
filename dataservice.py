@@ -28,6 +28,7 @@ class DataService:
         self.title = None 
         self.soup = None 
         self.dataFrame = None
+        self.year = 2024
         print("[DEBUG] DataService initialized.")
 
     def set_source(self, url):
@@ -175,9 +176,14 @@ class DataService:
         self.dataFrame["datetime"] = self.dataFrame["Zeit"].apply(self.normalize_time)
         self.dataFrame["datetime"] = pd.to_datetime(self.dataFrame["datetime"])
         self.dataFrame["Zeit"] = self.dataFrame["datetime"].dt.strftime("%H:%M:%S")
-        #self.dataFrame["Zeit_minutes"] = self.dataFrame["Zeit"].dt.total_seconds() / 60
-        #self.dataFrame["Zeit"] = self.dataFrame["Zeit"].dt.components.apply(lambda row: f"{row.hours:02}:{row.minutes:02}:{row.seconds:02}", axis=1)
-    
+
+          # Extract only the time
+        self.dataFrame["time_delta"] = self.dataFrame["datetime"].dt.time
+
+        # Convert time into timedelta and then calculate total minutes
+        self.dataFrame["time_minutes"] = self.dataFrame["time_delta"].apply(lambda x: pd.Timedelta(hours=x.hour, minutes=x.minute, seconds=x.second).total_seconds() / 60)
+
+       
     def set_agegroup(self): 
         """
         extracts the ageroup form the AK-Pl. col
@@ -185,15 +191,31 @@ class DataService:
         pattern = r"^\d+\.\s*(.*)"
         self.dataFrame["AK"] = self.dataFrame["AK-Pl."].apply(lambda x: re.sub(pattern, r"\1", x))
     
-    def set_sex(self): 
+    def set_age(self): 
+        self.dataFrame["Jg."] = self.dataFrame["Jg."].astype("int")
+        self.dataFrame["Age"] = 2024 - self.dataFrame["Jg."].astype("int")
+    
+    def set_gender(self): 
         """
-        sets the sex
+        sets the gender
         """
         self.dataFrame["M/W"] = self.dataFrame["AK"].str[0]
     
     def drop_nat(self): 
         self.dataFrame.drop(["Nat."], axis=1, inplace=True)
-            
+
+    def sort_df_by_ag(self): 
+        self.dataFrame['AG_numeric'] = self.dataFrame['AK'].str.extract(r'(\d+)$').fillna(0).astype(int)
+        
+        order = list(self.dataFrame["AG_numeric"].unique())
+        order.sort()
+        order.remove(0)
+        order.insert(order.index(30), 0)
+        
+        self.dataFrame["AG_numeric"] = pd.Categorical(self.dataFrame["AG_numeric"], categories=order, ordered=True)
+
+        self.dataFrame.sort_values("AG_numeric", inplace=True)
+
     def scrape_data(self, url):
         """
         Performs all necessary steps to scrape data from the given URL:
@@ -239,9 +261,13 @@ class DataService:
 
         self.set_agegroup() 
 
-        self.set_sex() 
+        self.set_gender() 
 
         self.drop_nat()
+
+        self.set_age() 
+
+        self.sort_df_by_ag()
 
         self.close() 
 

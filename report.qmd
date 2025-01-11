@@ -38,7 +38,7 @@ data = obj.scrape_data("https://my.raceresult.com/309137/")
 
 ## 
 
-# Demographics
+# Ergebnisliste 
 
 ```{python}
 #make table 
@@ -70,7 +70,11 @@ table.show()
 
 ```
 
+# Demografiedaten 
 
+::::: {layout = "[35, 65]"}
+
+::: {#firstcolumn}
 
 ```{python}
 
@@ -81,9 +85,13 @@ gender_counts = data['M/W'].value_counts()
 fig = px.pie(
     names=gender_counts.index,  # The categories (M and W)
     values=gender_counts.values,  # The count of each category
-    title="Proportion of Male/Female Participants",  # Title of the pie chart
+    title="Verhältnis M/W",  # Title of the pie chart
     color=gender_counts.index,  # Color by gender categories (M and W)
     color_discrete_map={"M": "#b81212", "W": "#ffffff"}
+)
+
+fig.update_layout(
+    title_font=dict(size=20, family="Arial", color="black"), 
 )
 
 # Add a red border around the white sector (Female category)
@@ -95,20 +103,63 @@ fig.update_traces(
             color="#b81212",  # Red color for the border
             width=1  # Set the width of the border
         )
-    )
+    ), 
+    opacity = 0.8
 )
+
+
+
 
 # Show the pie chart
 fig.show()
 
 ```
 
+:::
+
+::: {#seccondcolumn}
+
+```{python}
+fig = px.histogram(
+    data,
+    x="AK", 
+    title = "Teilnehmer pro Altersklasse", 
+    color_discrete_sequence=["#b81212"]
+    
+)
+
+fig.update_layout(
+    title_font=dict(size=20, family="Arial", color="black"),  # Title font style
+    xaxis_title = "Altersklasse", 
+    yaxis_title = "Teilnehmer",
+    xaxis=dict(showgrid=True, gridcolor="lightgray"),  # Add gridlines
+    yaxis=dict(showgrid=True, gridcolor="lightgray"),
+    plot_bgcolor="white",  # Background color# Gap between bars
+)
+
+fig.update_traces(
+    marker=dict(
+        line=dict(width=1, color="black")  # Add border to bars
+    ),
+    opacity=0.8, 
+    hovertemplate="<b>AK:</b> %{x}<br>" +  # Customize hover text
+              "<b>Teilnehmer:</b> %{y}<extra></extra>" 
+)
 
 
+# Show the pie chart
+fig.show()
+
+```
+
+:::
+:::::
 
 # Race Insights
 
-::: {layout-ncol="2"}
+::::: {layout = "[65, 35]"}
+
+::: {#firstcolumn}
 ```{python}
 import plotly.express as px
 
@@ -133,8 +184,6 @@ fig.update_layout(
     xaxis_tickformat = "%H:%M:%S"
 )
 
-def test(x): 
-  print( type(x))
 
 # Customize bars
 fig.update_traces(
@@ -150,6 +199,10 @@ fig.update_traces(
 fig.show()
 
 ```
+
+:::
+
+::: {#seccondcolumn}
 
 ```{python}
 
@@ -174,4 +227,82 @@ boxplot_race_time.update_layout(
 boxplot_race_time.show() 
 
 ```
+
 :::
+:::::
+
+```{python}
+
+fig = px.scatter(
+    data,
+    y="time_minutes",  
+    x="Age",  
+    color="M/W", 
+    title="Zusammenhang zwischen Alter und Zeit",
+    color_discrete_map={"M": "#b81212", "W": "#000000"}, 
+    trendline="ols"
+)
+
+fig.update_layout(
+    title_font=dict(size=20, family="Arial", color="black"),  
+    yaxis_title="Zeit", 
+    xaxis_title="Alter",
+    yaxis=dict(
+        showgrid=True, gridcolor="lightgray", tickformat="%H:%M:%S"  # Format time
+    ),
+    xaxis=dict(
+        showgrid=True, gridcolor="lightgray"
+    ),
+    plot_bgcolor="white",  # Background color
+)
+
+fig.update_traces(
+    opacity = 0.8
+)
+
+fig.show()
+
+```
+
+```{python}
+from statsmodels.formula.api import ols
+from IPython.display import Markdown, display
+
+data.rename(columns={"M/W":"Gender"}, inplace=True)
+
+# Create the regression model including "Gender"
+regression_model = ols("time_minutes ~ Age + C(Gender)", data=data)
+
+# Fit the model
+regression_model = regression_model.fit()
+
+# Generate the summary as a Markdown string
+summary_md = f"""
+# Ergebnisse der Regression
+
+## Zusammenfassung
+- **Abhängige Variable**: Zeit in Minuten
+- **R2**: {regression_model.rsquared:.3f}
+- **Adjustiertes R2**: {regression_model.rsquared_adj:.3f}
+- **F-Statistik**: {regression_model.fvalue:.1f}
+- **P-Wert**: {regression_model.f_pvalue:.3e}
+- **Anzahl der Beobachtungen**: {regression_model.nobs:.0f}
+- **AIC**: {regression_model.aic:.1f}
+- **BIC**: {regression_model.bic:.1f}
+
+## Koeffizeiten
+| Variable | Koeffizient | Std. Fehler | t-Wert | p-Wert | Konfidenzintervall |
+|----------|-------------|------------|---------|---------|---------------------|
+"""
+
+# Using items() method instead of iteritems()
+for idx, row in regression_model.params.items():
+    conf_int = regression_model.conf_int().loc[idx]
+    summary_md += f"| {idx} | {row:.4f} | {regression_model.bse[idx]:.4f} | {regression_model.tvalues[idx]:.2f} | {regression_model.pvalues[idx]:.3e} | [{conf_int[0]:.4f}, {conf_int[1]:.4f}] |\n"
+
+# Display the summary
+display(Markdown(summary_md))
+
+
+
+```
