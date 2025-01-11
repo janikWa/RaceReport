@@ -8,7 +8,6 @@ import logging
 import time
 import re 
 
-# Constants for timeouts and indices
 COOKIE_BANNER_TIMEOUT = 5
 SHOW_ALL_BUTTON_INDEX = 1
 MAIN_TABLE_TIMEOUT = 10
@@ -192,19 +191,28 @@ class DataService:
         self.dataFrame["AK"] = self.dataFrame["AK-Pl."].apply(lambda x: re.sub(pattern, r"\1", x))
     
     def set_age(self): 
+        """
+        set age column
+        """
         self.dataFrame["Jg."] = self.dataFrame["Jg."].astype("int")
         self.dataFrame["Age"] = 2024 - self.dataFrame["Jg."].astype("int")
     
     def set_gender(self): 
         """
-        sets the gender
+        set gender column 
         """
         self.dataFrame["M/W"] = self.dataFrame["AK"].str[0]
     
     def drop_nat(self): 
+        """
+        drop the nat. column 
+        """
         self.dataFrame.drop(["Nat."], axis=1, inplace=True)
 
     def sort_df_by_ag(self): 
+        """
+        sort df by age group 
+        """
         self.dataFrame['AG_numeric'] = self.dataFrame['AK'].str.extract(r'(\d+)$').fillna(0).astype(int)
         
         order = list(self.dataFrame["AG_numeric"].unique())
@@ -218,14 +226,7 @@ class DataService:
 
     def scrape_data(self, url):
         """
-        Performs all necessary steps to scrape data from the given URL:
-        - Sets the source URL
-        - Handles cookie banner
-        - Retrieves metadata
-        - Clicks 'Show All' buttons
-        - Expands the table
-        - Extracts data as a DataFrame
-        
+    
         Args:
             url (str): The URL to scrape data from.
         
@@ -234,43 +235,20 @@ class DataService:
                 - 'metadata': A dictionary with 'date', 'location', and 'title'
                 - 'data': A pandas DataFrame with the extracted table
         """
-
-        # Step 1: Set the source
         self.set_source(url)
-
-        # Step 2: Handle the cookie banner
         self.handle_cookie_banner()
-
         self.click_show_all_buttons()
-
-        # Step 3: Get the metadata about the race
         self.create_soup()
-
         self.get_metadata()
-
-        # Step 4: Click 'Show All' buttons if any
-
-
-        # Step 5: Expand the table
         self.expand_table()
-
-        # Step 6: Get the data as a DataFrame
         self.get_table_as_df() 
-
         self.set_time()
-
         self.set_agegroup() 
-
         self.set_gender() 
-
         self.drop_nat()
-
         self.set_age() 
-
         self.sort_df_by_ag()
-
         self.close() 
-
         return self.dataFrame
 
 
