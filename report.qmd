@@ -12,7 +12,6 @@ echo: false
 toc: true
 jupyter: python3
 ---
-
 ```{python}
 #| echo: false
 from dataservice import DataService
@@ -23,16 +22,28 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px 
+import papermill
 ```
+
+
+```{python}
+#| tags: [parameters]
+
+source = "https://my.raceresult.com/309137/#3_EFFC53"
+
+name = "Winterlaufserie Rheinzabern - 15km"
+
+```
+
 
 ```{python}
 #| echo: false
 #| output: false
 obj = DataService() 
-data = obj.scrape_data("https://my.raceresult.com/309137/")
+data = obj.scrape_data(source)
 ```
 
-# `{python} obj.title`
+# `{python} name`
 
 ## 📅 `{python} obj.date` \|📍 `{python} obj.location`
 
@@ -43,7 +54,7 @@ data = obj.scrape_data("https://my.raceresult.com/309137/")
 ```{python}
 #make table 
 
-cols_to_show = [col for col in data.columns if col not in ["datetime", "AK", "M/W"]]
+cols_to_show = [col for col in data.columns if col not in ['datetime', 'time_delta', 'time_minutes', 'AK', 'M/W', 'Age','AG_numeric']]
 
 table = go.Figure(
     data=[
@@ -120,6 +131,9 @@ fig.show()
 ::: {#seccondcolumn}
 
 ```{python}
+obj.sort_df_by_ag()
+data = obj.dataFrame
+
 fig = px.histogram(
     data,
     x="AK", 
@@ -302,7 +316,6 @@ for idx, row in regression_model.params.items():
 
 # Display the summary
 display(Markdown(summary_md))
-
 
 
 ```

@@ -247,7 +247,6 @@ class DataService:
         self.set_gender() 
         self.drop_nat()
         self.set_age() 
-        self.sort_df_by_ag()
         self.close() 
         return self.dataFrame
 
